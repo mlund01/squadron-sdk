@@ -1,4 +1,4 @@
-module github.com/mlund01/squad-sdk
+module github.com/mlund01/squadron-sdk
 
 go 1.23.0
 

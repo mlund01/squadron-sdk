@@ -1,4 +1,4 @@
-package squad
+package squadron
 
 import (
 	"context"
@@ -8,14 +8,14 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 
-	pb "github.com/mlund01/squad-sdk/proto"
+	pb "github.com/mlund01/squadron-sdk/proto"
 )
 
 // Handshake is the handshake config for plugins
 var Handshake = plugin.HandshakeConfig{
 	ProtocolVersion:  1,
 	MagicCookieKey:   "SQUAD_PLUGIN",
-	MagicCookieValue: "squad-tool-plugin-v1",
+	MagicCookieValue: "squadron-tool-plugin-v1",
 }
 
 // ToolInfo contains metadata about a tool

@@ -1,4 +1,4 @@
-package squad
+package squadron
 
 import "encoding/json"
 

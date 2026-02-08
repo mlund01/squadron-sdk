@@ -1,4 +1,4 @@
-package squad
+package squadron
 
 import (
 	"github.com/hashicorp/go-plugin"

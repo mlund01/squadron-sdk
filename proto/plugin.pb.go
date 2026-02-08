@@ -477,7 +477,7 @@ const file_plugin_proto_plugin_proto_rawDesc = "" +
 	"\tConfigure\x12\x18.plugin.ConfigureRequest\x1a\x19.plugin.ConfigureResponse\x121\n" +
 	"\x04Call\x12\x13.plugin.CallRequest\x1a\x14.plugin.CallResponse\x12F\n" +
 	"\vGetToolInfo\x12\x1a.plugin.GetToolInfoRequest\x1a\x1b.plugin.GetToolInfoResponse\x12@\n" +
-	"\tListTools\x12\x18.plugin.ListToolsRequest\x1a\x19.plugin.ListToolsResponseB\x14Z\x12squad/plugin/protob\x06proto3"
+	"\tListTools\x12\x18.plugin.ListToolsRequest\x1a\x19.plugin.ListToolsResponseB\x14Z\x12squadron/plugin/protob\x06proto3"
 
 var (
 	file_plugin_proto_plugin_proto_rawDescOnce sync.Once
