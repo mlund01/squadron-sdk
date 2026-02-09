@@ -22,3 +22,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/mlund01/squadron-sdk => ../squadron-sdk
