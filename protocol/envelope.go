@@ -37,6 +37,20 @@ const (
 	TypeGetEvents       MessageType = "get_events"
 	TypeGetEventsResult MessageType = "get_events_result"
 
+	// Agent chat
+	TypeChatMessage    MessageType = "chat_message"
+	TypeChatMessageAck MessageType = "chat_message_ack"
+	TypeChatEvent      MessageType = "chat_event"
+	TypeChatComplete   MessageType = "chat_complete"
+
+	// Chat history & management
+	TypeGetChatHistory        MessageType = "get_chat_history"
+	TypeGetChatHistoryResult  MessageType = "get_chat_history_result"
+	TypeGetChatMessages       MessageType = "get_chat_messages"
+	TypeGetChatMessagesResult MessageType = "get_chat_messages_result"
+	TypeArchiveChat           MessageType = "archive_chat"
+	TypeArchiveChatAck        MessageType = "archive_chat_ack"
+
 	// Error
 	TypeError MessageType = "error"
 )

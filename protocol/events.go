@@ -203,3 +203,37 @@ type AgentAnswerData struct {
 	AgentName string `json:"agentName"`
 	Content   string `json:"content"`
 }
+
+// =============================================================================
+// Agent chat event types
+// =============================================================================
+
+// ChatEventType identifies a specific event during an agent chat session.
+type ChatEventType string
+
+const (
+	ChatEventThinking       ChatEventType = "thinking"
+	ChatEventReasoningChunk ChatEventType = "reasoning_chunk"
+	ChatEventReasoningDone  ChatEventType = "reasoning_done"
+	ChatEventAnswerChunk    ChatEventType = "answer_chunk"
+	ChatEventAnswerDone     ChatEventType = "answer_done"
+	ChatEventCallingTool    ChatEventType = "calling_tool"
+	ChatEventToolComplete   ChatEventType = "tool_complete"
+	ChatEventTurnComplete   ChatEventType = "turn_complete"
+	ChatEventError          ChatEventType = "error"
+)
+
+// Chat event data structs
+
+type ChatChunkData struct {
+	Content string `json:"content"`
+}
+
+type ChatToolData struct {
+	ToolName string `json:"toolName"`
+	Payload  string `json:"payload,omitempty"`
+}
+
+type ChatErrorData struct {
+	Message string `json:"message"`
+}

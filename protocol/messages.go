@@ -42,6 +42,7 @@ type ModelInfo struct {
 type AgentInfo struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
+	Role        string   `json:"role,omitempty"`
 	Model       string   `json:"model"`
 	Tools       []string `json:"tools,omitempty"`
 }
@@ -49,8 +50,24 @@ type AgentInfo struct {
 type MissionInfo struct {
 	Name        string             `json:"name"`
 	Description string             `json:"description,omitempty"`
+	Commander   string             `json:"commander,omitempty"`
+	Agents      []string           `json:"agents,omitempty"`
 	Inputs      []MissionInputInfo `json:"inputs,omitempty"`
+	Datasets    []DatasetInfo      `json:"datasets,omitempty"`
 	Tasks       []TaskInfo         `json:"tasks,omitempty"`
+}
+
+type DatasetInfo struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	BindTo      string          `json:"bindTo,omitempty"`
+	Schema      []DatasetField  `json:"schema,omitempty"`
+}
+
+type DatasetField struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Required bool   `json:"required,omitempty"`
 }
 
 type MissionInputInfo struct {
@@ -61,16 +78,48 @@ type MissionInputInfo struct {
 }
 
 type TaskInfo struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description,omitempty"`
-	Agent       string   `json:"agent,omitempty"`
-	Commander   string   `json:"commander,omitempty"`
-	DependsOn   []string `json:"dependsOn,omitempty"`
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	Objective   string            `json:"objective,omitempty"`
+	Agent       string            `json:"agent,omitempty"`
+	Commander   string            `json:"commander,omitempty"`
+	DependsOn   []string          `json:"dependsOn,omitempty"`
+	Iterator    *TaskIteratorInfo `json:"iterator,omitempty"`
 }
 
+type TaskIteratorInfo struct {
+	Dataset          string `json:"dataset"`
+	Parallel         bool   `json:"parallel"`
+	MaxRetries       int    `json:"maxRetries,omitempty"`
+	ConcurrencyLimit int    `json:"concurrencyLimit,omitempty"`
+}
+
+
 type PluginInfo struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+	Name    string     `json:"name"`
+	Path    string     `json:"path"`
+	Builtin bool       `json:"builtin,omitempty"`
+	Tools   []ToolInfo `json:"tools,omitempty"`
+}
+
+type ToolInfo struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Parameters  *ToolSchema     `json:"parameters,omitempty"`
+}
+
+type ToolSchema struct {
+	Type       string                  `json:"type"`
+	Properties map[string]ToolProperty `json:"properties,omitempty"`
+	Required   []string                `json:"required,omitempty"`
+}
+
+type ToolProperty struct {
+	Type        string                  `json:"type"`
+	Description string                  `json:"description,omitempty"`
+	Items       *ToolProperty           `json:"items,omitempty"`
+	Properties  map[string]ToolProperty `json:"properties,omitempty"`
+	Required    []string                `json:"required,omitempty"`
 }
 
 type VariableInfo struct {
@@ -228,6 +277,89 @@ type MissionEventInfo struct {
 	EventType      string  `json:"eventType"`
 	DataJSON       string  `json:"dataJson"`
 	CreatedAt      string  `json:"createdAt"`
+}
+
+// =============================================================================
+// Agent chat
+// =============================================================================
+
+// ChatMessagePayload is sent by commander to start/continue a chat with an agent.
+type ChatMessagePayload struct {
+	SessionID string `json:"sessionId,omitempty"`
+	AgentName string `json:"agentName"`
+	Content   string `json:"content"`
+}
+
+// ChatMessageAckPayload is the instance's acknowledgement.
+type ChatMessageAckPayload struct {
+	SessionID string `json:"sessionId"`
+	Accepted  bool   `json:"accepted"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+// ChatEventPayload wraps a streaming chat event.
+type ChatEventPayload struct {
+	SessionID string        `json:"sessionId"`
+	EventType ChatEventType `json:"eventType"`
+	Data      interface{}   `json:"data"`
+}
+
+// ChatCompletePayload signals the agent finished its turn.
+type ChatCompletePayload struct {
+	SessionID string `json:"sessionId"`
+	Status    string `json:"status"` // "completed" or "error"
+	Error     string `json:"error,omitempty"`
+}
+
+// =============================================================================
+// Chat history queries
+// =============================================================================
+
+type GetChatHistoryPayload struct {
+	AgentName string `json:"agentName,omitempty"`
+	Limit     int    `json:"limit"`
+	Offset    int    `json:"offset"`
+}
+
+type GetChatHistoryResultPayload struct {
+	Chats []ChatSessionInfo `json:"chats"`
+	Total int               `json:"total"`
+}
+
+type GetChatMessagesPayload struct {
+	SessionID string `json:"sessionId"`
+}
+
+type GetChatMessagesResultPayload struct {
+	Messages []ChatMessageInfo `json:"messages"`
+}
+
+type ChatSessionInfo struct {
+	SessionID string `json:"sessionId"`
+	AgentName string `json:"agentName"`
+	Model     string `json:"model"`
+	Status    string `json:"status"`
+	StartedAt string `json:"startedAt"`
+}
+
+type ChatMessageInfo struct {
+	ID        int    `json:"id"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+}
+
+// =============================================================================
+// Chat management
+// =============================================================================
+
+type ArchiveChatPayload struct {
+	SessionID string `json:"sessionId"`
+}
+
+type ArchiveChatAckPayload struct {
+	Accepted bool   `json:"accepted"`
+	Reason   string `json:"reason,omitempty"`
 }
 
 // =============================================================================
