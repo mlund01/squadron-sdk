@@ -204,9 +204,19 @@ type GetTaskDetailPayload struct {
 }
 
 type GetTaskDetailResultPayload struct {
-	Task     MissionTaskInfo  `json:"task"`
-	Outputs  []TaskOutputInfo `json:"outputs"`
-	Sessions []SessionInfoDTO `json:"sessions"`
+	Task        MissionTaskInfo  `json:"task"`
+	Outputs     []TaskOutputInfo `json:"outputs"`
+	Sessions    []SessionInfoDTO `json:"sessions"`
+	ToolResults []ToolResultDTO  `json:"toolResults"`
+}
+
+type ToolResultDTO struct {
+	ID          string `json:"id"`
+	SessionID   string `json:"sessionId"`
+	ToolName    string `json:"toolName"`
+	InputParams string `json:"inputParams,omitempty"`
+	StartedAt   string `json:"startedAt"`
+	FinishedAt  string `json:"finishedAt"`
 }
 
 type GetEventsPayload struct {
@@ -217,6 +227,36 @@ type GetEventsPayload struct {
 
 type GetEventsResultPayload struct {
 	Events []MissionEventInfo `json:"events"`
+}
+
+// =============================================================================
+// Dataset queries
+// =============================================================================
+
+type GetDatasetsPayload struct {
+	MissionID string `json:"missionId"`
+}
+
+type DatasetRecordInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	ItemCount   int    `json:"itemCount"`
+}
+
+type GetDatasetsResultPayload struct {
+	Datasets []DatasetRecordInfo `json:"datasets"`
+}
+
+type GetDatasetItemsPayload struct {
+	DatasetID string `json:"datasetId"`
+	Offset    int    `json:"offset"`
+	Limit     int    `json:"limit"`
+}
+
+type GetDatasetItemsResultPayload struct {
+	Items []string `json:"items"`
+	Total int      `json:"total"`
 }
 
 // =============================================================================
@@ -265,6 +305,7 @@ type SessionInfoDTO struct {
 	Model          string  `json:"model,omitempty"`
 	Status         string  `json:"status"`
 	StartedAt      string  `json:"startedAt"`
+	FinishedAt     *string `json:"finishedAt,omitempty"`
 	IterationIndex *int    `json:"iterationIndex,omitempty"`
 }
 
@@ -360,6 +401,62 @@ type ArchiveChatPayload struct {
 type ArchiveChatAckPayload struct {
 	Accepted bool   `json:"accepted"`
 	Reason   string `json:"reason,omitempty"`
+}
+
+// =============================================================================
+// Config reload
+// =============================================================================
+
+type ReloadConfigPayload struct{}
+
+type ReloadConfigResultPayload struct {
+	Success bool           `json:"success"`
+	Error   string         `json:"error,omitempty"`
+	Config  InstanceConfig `json:"config,omitempty"`
+}
+
+// =============================================================================
+// Config file operations
+// =============================================================================
+
+type ListConfigFilesPayload struct{}
+
+type ConfigFileInfo struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}
+
+type ListConfigFilesResultPayload struct {
+	Files []ConfigFileInfo `json:"files"`
+	Path  string           `json:"path"`
+}
+
+type GetConfigFilePayload struct {
+	Name string `json:"name"`
+}
+
+type GetConfigFileResultPayload struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+type WriteConfigFilePayload struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+type WriteConfigFileResultPayload struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
+type ValidateConfigPayload struct {
+	Files map[string]string `json:"files"` // filename → proposed content
+}
+
+type ValidateConfigResultPayload struct {
+	Valid  bool     `json:"valid"`
+	Errors []string `json:"errors,omitempty"`
 }
 
 // =============================================================================

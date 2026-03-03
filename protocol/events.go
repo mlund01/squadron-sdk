@@ -165,6 +165,7 @@ type CommanderCallingToolData struct {
 type CommanderToolCompleteData struct {
 	TaskName string `json:"taskName"`
 	ToolName string `json:"toolName"`
+	Result   string `json:"result"`
 }
 
 // Agent events
@@ -196,6 +197,7 @@ type AgentToolCompleteData struct {
 	TaskName  string `json:"taskName"`
 	AgentName string `json:"agentName"`
 	ToolName  string `json:"toolName"`
+	Result    string `json:"result"`
 }
 
 type AgentAnswerData struct {
@@ -232,6 +234,7 @@ type ChatChunkData struct {
 type ChatToolData struct {
 	ToolName string `json:"toolName"`
 	Payload  string `json:"payload,omitempty"`
+	Result   string `json:"result,omitempty"`
 }
 
 type ChatErrorData struct {
