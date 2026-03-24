@@ -3,7 +3,6 @@ module github.com/mlund01/squadron-sdk
 go 1.23.0
 
 require (
-	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-plugin v1.6.3
 	golang.org/x/sys v0.29.0
 	google.golang.org/grpc v1.70.0
