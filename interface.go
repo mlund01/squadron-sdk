@@ -30,8 +30,9 @@ type ToolProvider interface {
 	// Configure passes settings from HCL config to the plugin
 	Configure(settings map[string]string) error
 
-	// Call invokes a tool with the given JSON payload
-	Call(toolName string, payload string) (string, error)
+	// Call invokes a tool with the given JSON payload.
+	// Implementations should respect context cancellation for long-running operations.
+	Call(ctx context.Context, toolName string, payload string) (string, error)
 
 	// GetToolInfo returns metadata about a specific tool
 	GetToolInfo(toolName string) (*ToolInfo, error)
@@ -73,8 +74,8 @@ func (c *GRPCClient) Configure(settings map[string]string) error {
 	return nil
 }
 
-func (c *GRPCClient) Call(toolName string, payload string) (string, error) {
-	resp, err := c.client.Call(context.Background(), &pb.CallRequest{
+func (c *GRPCClient) Call(ctx context.Context, toolName string, payload string) (string, error) {
+	resp, err := c.client.Call(ctx, &pb.CallRequest{
 		ToolName: toolName,
 		Payload:  payload,
 	})
@@ -140,7 +141,7 @@ func (s *GRPCServer) Configure(ctx context.Context, req *pb.ConfigureRequest) (*
 }
 
 func (s *GRPCServer) Call(ctx context.Context, req *pb.CallRequest) (*pb.CallResponse, error) {
-	result, err := s.Impl.Call(req.ToolName, req.Payload)
+	result, err := s.Impl.Call(ctx, req.ToolName, req.Payload)
 	if err != nil {
 		return nil, err
 	}
