@@ -11,37 +11,27 @@ import (
 	pb "github.com/mlund01/squadron-sdk/proto"
 )
 
-// Handshake is the handshake config for plugins
 var Handshake = plugin.HandshakeConfig{
 	ProtocolVersion:  1,
 	MagicCookieKey:   "SQUAD_PLUGIN",
 	MagicCookieValue: "squadron-tool-plugin-v1",
 }
 
-// ToolInfo contains metadata about a tool
 type ToolInfo struct {
-	Name        string
-	Description string
-	Schema      Schema
+	Name         string
+	Description  string
+	Schema       Schema
+	RawSchema    json.RawMessage
+	OutputSchema json.RawMessage
 }
 
-// ToolProvider is the interface that all tool plugins must implement
 type ToolProvider interface {
-	// Configure passes settings from HCL config to the plugin
 	Configure(settings map[string]string) error
-
-	// Call invokes a tool with the given JSON payload.
-	// Implementations should respect context cancellation for long-running operations.
 	Call(ctx context.Context, toolName string, payload string) (string, error)
-
-	// GetToolInfo returns metadata about a specific tool
 	GetToolInfo(toolName string) (*ToolInfo, error)
-
-	// ListTools returns info for all tools this plugin provides
 	ListTools() ([]*ToolInfo, error)
 }
 
-// ToolPluginGRPCPlugin is the plugin.GRPCPlugin implementation
 type ToolPluginGRPCPlugin struct {
 	plugin.Plugin
 	Impl ToolProvider
@@ -56,7 +46,6 @@ func (p *ToolPluginGRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GR
 	return &GRPCClient{client: pb.NewToolPluginClient(c)}, nil
 }
 
-// GRPCClient is the gRPC client implementation of ToolProvider
 type GRPCClient struct {
 	client pb.ToolPluginClient
 }
@@ -111,22 +100,24 @@ func (c *GRPCClient) ListTools() ([]*ToolInfo, error) {
 	return tools, nil
 }
 
-// protoToToolInfo converts a protobuf ToolInfo to our ToolInfo
 func protoToToolInfo(t *pb.ToolInfo) (*ToolInfo, error) {
-	var schema Schema
-	if t.SchemaJson != "" {
-		if err := json.Unmarshal([]byte(t.SchemaJson), &schema); err != nil {
-			return nil, err
-		}
-	}
-	return &ToolInfo{
+	info := &ToolInfo{
 		Name:        t.Name,
 		Description: t.Description,
-		Schema:      schema,
-	}, nil
+	}
+	if t.SchemaJson != "" {
+		raw := json.RawMessage(t.SchemaJson)
+		info.RawSchema = raw
+		var schema Schema
+		_ = json.Unmarshal(raw, &schema)
+		info.Schema = schema
+	}
+	if t.OutputSchemaJson != "" {
+		info.OutputSchema = json.RawMessage(t.OutputSchemaJson)
+	}
+	return info, nil
 }
 
-// GRPCServer is the gRPC server implementation that wraps a ToolProvider
 type GRPCServer struct {
 	pb.UnimplementedToolPluginServer
 	Impl ToolProvider
@@ -170,17 +161,21 @@ func (s *GRPCServer) ListTools(ctx context.Context, req *pb.ListToolsRequest) (*
 	return &pb.ListToolsResponse{Tools: protoTools}, nil
 }
 
-// toolInfoToProto converts our ToolInfo to protobuf ToolInfo
 func toolInfoToProto(t *ToolInfo) *pb.ToolInfo {
-	schemaJSON, _ := json.Marshal(t.Schema)
+	var schemaJSON []byte
+	if len(t.RawSchema) > 0 {
+		schemaJSON = t.RawSchema
+	} else {
+		schemaJSON, _ = json.Marshal(t.Schema)
+	}
 	return &pb.ToolInfo{
-		Name:        t.Name,
-		Description: t.Description,
-		SchemaJson:  string(schemaJSON),
+		Name:             t.Name,
+		Description:      t.Description,
+		SchemaJson:       string(schemaJSON),
+		OutputSchemaJson: string(t.OutputSchema),
 	}
 }
 
-// PluginMap is the map of plugins we can dispense
 var PluginMap = map[string]plugin.Plugin{
 	"tool": &ToolPluginGRPCPlugin{},
 }
