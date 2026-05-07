@@ -11,16 +11,12 @@ import (
 	pb "github.com/mlund01/squadron-sdk/proto"
 )
 
-// Handshake is the handshake config for plugins
 var Handshake = plugin.HandshakeConfig{
 	ProtocolVersion:  1,
 	MagicCookieKey:   "SQUAD_PLUGIN",
 	MagicCookieValue: "squadron-tool-plugin-v1",
 }
 
-// ToolInfo contains metadata about a tool. RawSchema, when set, ships
-// verbatim and overrides Schema — use it for JSON Schema features outside
-// the Schema struct's subset (enum, $defs, default, validators, etc.).
 type ToolInfo struct {
 	Name        string
 	Description string
@@ -28,23 +24,13 @@ type ToolInfo struct {
 	RawSchema   json.RawMessage
 }
 
-// ToolProvider is the interface that all tool plugins must implement
 type ToolProvider interface {
-	// Configure passes settings from HCL config to the plugin
 	Configure(settings map[string]string) error
-
-	// Call invokes a tool with the given JSON payload.
-	// Implementations should respect context cancellation for long-running operations.
 	Call(ctx context.Context, toolName string, payload string) (string, error)
-
-	// GetToolInfo returns metadata about a specific tool
 	GetToolInfo(toolName string) (*ToolInfo, error)
-
-	// ListTools returns info for all tools this plugin provides
 	ListTools() ([]*ToolInfo, error)
 }
 
-// ToolPluginGRPCPlugin is the plugin.GRPCPlugin implementation
 type ToolPluginGRPCPlugin struct {
 	plugin.Plugin
 	Impl ToolProvider
@@ -59,7 +45,6 @@ func (p *ToolPluginGRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GR
 	return &GRPCClient{client: pb.NewToolPluginClient(c)}, nil
 }
 
-// GRPCClient is the gRPC client implementation of ToolProvider
 type GRPCClient struct {
 	client pb.ToolPluginClient
 }
@@ -129,7 +114,6 @@ func protoToToolInfo(t *pb.ToolInfo) (*ToolInfo, error) {
 	return info, nil
 }
 
-// GRPCServer is the gRPC server implementation that wraps a ToolProvider
 type GRPCServer struct {
 	pb.UnimplementedToolPluginServer
 	Impl ToolProvider
@@ -187,7 +171,6 @@ func toolInfoToProto(t *ToolInfo) *pb.ToolInfo {
 	}
 }
 
-// PluginMap is the map of plugins we can dispense
 var PluginMap = map[string]plugin.Plugin{
 	"tool": &ToolPluginGRPCPlugin{},
 }

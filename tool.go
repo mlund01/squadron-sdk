@@ -53,7 +53,6 @@ func reflectSchema[I any]() (json.RawMessage, error) {
 	}
 	var zero I
 	schema := r.Reflect(zero)
-	// Strip $schema and $id; LLM tool callers don't use them and they add noise.
 	schema.Version = ""
 	schema.ID = ""
 	return json.Marshal(schema)
