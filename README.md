@@ -22,79 +22,45 @@ Create `main.go`:
 package main
 
 import (
-    "encoding/json"
+    "context"
     "fmt"
 
     squadron "github.com/mlund01/squadron-sdk"
 )
 
-var tools = map[string]*squadron.ToolInfo{
-    "greet": {
-        Name:        "greet",
-        Description: "Greet someone by name",
-        Schema: squadron.Schema{
-            Type: squadron.TypeObject,
-            Properties: squadron.PropertyMap{
-                "name": {
-                    Type:        squadron.TypeString,
-                    Description: "The name to greet",
-                },
-            },
-            Required: []string{"name"},
-        },
-    },
-}
-
-type Plugin struct {
-    greeting string
-}
-
-func (p *Plugin) Configure(settings map[string]string) error {
-    if v, ok := settings["greeting"]; ok {
-        p.greeting = v
-    }
-    return nil
-}
-
-func (p *Plugin) Call(toolName string, payload string) (string, error) {
-    switch toolName {
-    case "greet":
-        var params struct {
-            Name string `json:"name"`
-        }
-        if err := json.Unmarshal([]byte(payload), &params); err != nil {
-            return "", fmt.Errorf("invalid payload: %w", err)
-        }
-        greeting := p.greeting
-        if greeting == "" {
-            greeting = "Hello"
-        }
-        return fmt.Sprintf("%s, %s!", greeting, params.Name), nil
-    default:
-        return "", fmt.Errorf("unknown tool: %s", toolName)
-    }
-}
-
-func (p *Plugin) GetToolInfo(toolName string) (*squadron.ToolInfo, error) {
-    info, ok := tools[toolName]
-    if !ok {
-        return nil, fmt.Errorf("unknown tool: %s", toolName)
-    }
-    return info, nil
-}
-
-func (p *Plugin) ListTools() ([]*squadron.ToolInfo, error) {
-    result := make([]*squadron.ToolInfo, 0, len(tools))
-    for _, info := range tools {
-        result = append(result, info)
-    }
-    return result, nil
+type GreetInput struct {
+    Name string `json:"name" jsonschema:"required,description=The name to greet"`
 }
 
 func main() {
-    squadron.Serve(&Plugin{})
+    app := squadron.New()
+
+    var greeting string
+    app.Configure(func(settings map[string]string) error {
+        greeting = settings["greeting"]
+        if greeting == "" {
+            greeting = "Hello"
+        }
+        return nil
+    })
+
+    squadron.Tool(app, "greet", "Greet someone by name",
+        func(ctx context.Context, in GreetInput) (string, error) {
+            return fmt.Sprintf("%s, %s!", greeting, in.Name), nil
+        })
+
+    app.Serve()
 }
 ```
+
+The schema is reflected from `GreetInput`'s struct tags via
+[github.com/invopop/jsonschema](https://github.com/invopop/jsonschema). Use
+the standard `jsonschema:` tag keys (`required`, `description=...`,
+`enum=...,enum=...`, `minimum=N`, `maximum=N`, `default=...`, `pattern=...`,
+etc.). For descriptions that need commas, use the dedicated
+`jsonschema_description:` tag instead.
+
+Pass `struct{}` as the input type for tools that take no parameters.
 
 ### 3. Build and install locally
 
@@ -138,68 +104,45 @@ squadron plugin call example greet '{"name": "World"}'
 # tools = [plugins.example.all]
 ```
 
-## Interface
+## API layers
 
-Every plugin implements the `ToolProvider` interface:
+There are two ways to write a plugin:
+
+### App + Tool[I, O] (recommended)
+
+A typed, generics-driven API. The schema is derived from the input struct,
+the payload is unmarshaled and the result marshaled automatically:
+
+```go
+app := squadron.New()
+app.Configure(func(settings map[string]string) error { ... })
+squadron.Tool(app, name, description, func(ctx, in InputType) (Output, error) { ... })
+app.Serve()
+```
+
+Behind the scenes this builds a `ToolProvider` (see below) that ships full
+JSON Schema bytes — `enum`, `default`, `minimum`/`maximum`, `$defs`, etc. all
+flow through to the LLM verbatim.
+
+### ToolProvider (low-level)
+
+The underlying contract, useful when tools are dynamic or the typed API
+doesn't fit:
 
 ```go
 type ToolProvider interface {
     Configure(settings map[string]string) error
-    Call(toolName string, payload string) (string, error)
+    Call(ctx context.Context, toolName string, payload string) (string, error)
     GetToolInfo(toolName string) (*ToolInfo, error)
     ListTools() ([]*ToolInfo, error)
 }
 ```
 
-| Method | Purpose |
-|--------|---------|
-| `Configure` | Receive settings from HCL config. Use this to initialize connections, set options, etc. |
-| `Call` | Handle a tool invocation. `payload` is a JSON string matching the tool's schema. |
-| `GetToolInfo` | Return metadata and schema for a specific tool. |
-| `ListTools` | Return metadata for all tools the plugin provides. |
+`ToolInfo.RawSchema` (a `json.RawMessage`) ships verbatim and overrides the
+typed `Schema` if both are set — use it to hand-write rich JSON Schema.
 
-The entry point is always `squadron.Serve(&YourPlugin{})` in `main()`.
-
-## Schema Types
-
-Tool parameters are defined using JSON Schema types:
-
-```go
-squadron.TypeString   // "string"
-squadron.TypeNumber   // "number"
-squadron.TypeInteger  // "integer"
-squadron.TypeBoolean  // "boolean"
-squadron.TypeArray    // "array"
-squadron.TypeObject   // "object"
-```
-
-Nested objects and arrays are supported:
-
-```go
-Schema: squadron.Schema{
-    Type: squadron.TypeObject,
-    Properties: squadron.PropertyMap{
-        "query": {
-            Type:        squadron.TypeString,
-            Description: "SQL query to execute",
-        },
-        "options": {
-            Type:        squadron.TypeObject,
-            Description: "Query options",
-            Properties: squadron.PropertyMap{
-                "timeout": {Type: squadron.TypeInteger, Description: "Timeout in seconds"},
-                "limit":   {Type: squadron.TypeInteger, Description: "Max rows to return"},
-            },
-        },
-        "tags": {
-            Type:        squadron.TypeArray,
-            Description: "Tags for the query",
-            Items:       &squadron.Property{Type: squadron.TypeString},
-        },
-    },
-    Required: []string{"query"},
-},
-```
+The entry point is `squadron.Serve(provider)` (or `app.Serve()`, which is
+the same thing).
 
 ## Settings
 

@@ -18,11 +18,21 @@ var Handshake = plugin.HandshakeConfig{
 	MagicCookieValue: "squadron-tool-plugin-v1",
 }
 
-// ToolInfo contains metadata about a tool
+// ToolInfo contains metadata about a tool.
+//
+// Schema is a typed projection that covers a subset of JSON Schema (type,
+// description, items, properties, required). It's enough for hand-written Go
+// plugins with simple inputs but lossy for richer schemas.
+//
+// RawSchema, when set, is sent verbatim to the host and overrides Schema. Use
+// it to ship full JSON Schema features (enum, $defs, oneOf, default,
+// validators, etc.) — typically populated by Tool[I, O] from a Go struct via
+// jsonschema reflection, but you can also hand-roll the bytes.
 type ToolInfo struct {
 	Name        string
 	Description string
 	Schema      Schema
+	RawSchema   json.RawMessage
 }
 
 // ToolProvider is the interface that all tool plugins must implement
@@ -111,19 +121,24 @@ func (c *GRPCClient) ListTools() ([]*ToolInfo, error) {
 	return tools, nil
 }
 
-// protoToToolInfo converts a protobuf ToolInfo to our ToolInfo
+// protoToToolInfo converts a protobuf ToolInfo to our ToolInfo. The full
+// schema bytes are preserved in RawSchema; the typed Schema is a best-effort
+// projection that covers the common subset.
 func protoToToolInfo(t *pb.ToolInfo) (*ToolInfo, error) {
-	var schema Schema
-	if t.SchemaJson != "" {
-		if err := json.Unmarshal([]byte(t.SchemaJson), &schema); err != nil {
-			return nil, err
-		}
-	}
-	return &ToolInfo{
+	info := &ToolInfo{
 		Name:        t.Name,
 		Description: t.Description,
-		Schema:      schema,
-	}, nil
+	}
+	if t.SchemaJson != "" {
+		raw := json.RawMessage(t.SchemaJson)
+		info.RawSchema = raw
+		// Best-effort: anything outside the typed subset is dropped here, but
+		// RawSchema retains the full document.
+		var schema Schema
+		_ = json.Unmarshal(raw, &schema)
+		info.Schema = schema
+	}
+	return info, nil
 }
 
 // GRPCServer is the gRPC server implementation that wraps a ToolProvider
@@ -170,9 +185,15 @@ func (s *GRPCServer) ListTools(ctx context.Context, req *pb.ListToolsRequest) (*
 	return &pb.ListToolsResponse{Tools: protoTools}, nil
 }
 
-// toolInfoToProto converts our ToolInfo to protobuf ToolInfo
+// toolInfoToProto converts our ToolInfo to protobuf ToolInfo. RawSchema, if
+// set, is sent verbatim; otherwise the typed Schema is marshaled.
 func toolInfoToProto(t *ToolInfo) *pb.ToolInfo {
-	schemaJSON, _ := json.Marshal(t.Schema)
+	var schemaJSON []byte
+	if len(t.RawSchema) > 0 {
+		schemaJSON = t.RawSchema
+	} else {
+		schemaJSON, _ = json.Marshal(t.Schema)
+	}
 	return &pb.ToolInfo{
 		Name:        t.Name,
 		Description: t.Description,
