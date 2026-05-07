@@ -57,12 +57,8 @@ func TestToolRegistersAndCalls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Call: %v", err)
 	}
-	var got string
-	if err := json.Unmarshal([]byte(result), &got); err != nil {
-		t.Fatalf("decode result: %v", err)
-	}
-	if got != "HI" {
-		t.Fatalf("got %q, want HI", got)
+	if result != "HI" {
+		t.Fatalf("got %q, want HI", result)
 	}
 }
 
@@ -77,8 +73,54 @@ func TestToolEmptyInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Call: %v", err)
 	}
-	if out != `"pong"` {
-		t.Fatalf("got %q, want \"pong\"", out)
+	if out != "pong" {
+		t.Fatalf("got %q, want pong (string returns must pass through unwrapped)", out)
+	}
+}
+
+func TestToolStructOutputIsJSON(t *testing.T) {
+	type out struct {
+		Echo string `json:"echo"`
+		N    int    `json:"n"`
+	}
+	app := New()
+	Tool(app, "echo", "",
+		func(ctx context.Context, _ struct{}) (out, error) {
+			return out{Echo: "hi", N: 3}, nil
+		})
+
+	got, err := app.AsProvider().Call(context.Background(), "echo", "")
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if got != `{"echo":"hi","n":3}` {
+		t.Fatalf("got %q, want JSON object", got)
+	}
+}
+
+func TestToolOutputSchemaReflected(t *testing.T) {
+	type result struct {
+		Status  string `json:"status" jsonschema:"enum=ok,enum=err"`
+		Message string `json:"message,omitempty"`
+	}
+	app := New()
+	Tool(app, "do", "",
+		func(ctx context.Context, _ struct{}) (result, error) {
+			return result{Status: "ok"}, nil
+		})
+
+	tools, _ := app.AsProvider().ListTools()
+	if len(tools[0].OutputSchema) == 0 {
+		t.Fatal("expected OutputSchema to be populated")
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(tools[0].OutputSchema, &schema); err != nil {
+		t.Fatalf("unmarshal output schema: %v", err)
+	}
+	props, _ := schema["properties"].(map[string]any)
+	status, _ := props["status"].(map[string]any)
+	if _, ok := status["enum"]; !ok {
+		t.Fatalf("output schema missing enum for status: %v", schema)
 	}
 }
 

@@ -18,10 +18,11 @@ var Handshake = plugin.HandshakeConfig{
 }
 
 type ToolInfo struct {
-	Name        string
-	Description string
-	Schema      Schema
-	RawSchema   json.RawMessage
+	Name         string
+	Description  string
+	Schema       Schema
+	RawSchema    json.RawMessage
+	OutputSchema json.RawMessage
 }
 
 type ToolProvider interface {
@@ -111,6 +112,9 @@ func protoToToolInfo(t *pb.ToolInfo) (*ToolInfo, error) {
 		_ = json.Unmarshal(raw, &schema)
 		info.Schema = schema
 	}
+	if t.OutputSchemaJson != "" {
+		info.OutputSchema = json.RawMessage(t.OutputSchemaJson)
+	}
 	return info, nil
 }
 
@@ -165,9 +169,10 @@ func toolInfoToProto(t *ToolInfo) *pb.ToolInfo {
 		schemaJSON, _ = json.Marshal(t.Schema)
 	}
 	return &pb.ToolInfo{
-		Name:        t.Name,
-		Description: t.Description,
-		SchemaJson:  string(schemaJSON),
+		Name:             t.Name,
+		Description:      t.Description,
+		SchemaJson:       string(schemaJSON),
+		OutputSchemaJson: string(t.OutputSchema),
 	}
 }
 

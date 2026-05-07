@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/invopop/jsonschema"
 )
@@ -17,14 +18,20 @@ func Tool[I, O any](app *App, name, description string, handler Handler[I, O]) {
 
 	rawSchema, err := reflectSchema[I]()
 	if err != nil {
-		panic(fmt.Sprintf("squadron: reflecting schema for tool %q: %v", name, err))
+		panic(fmt.Sprintf("squadron: reflecting input schema for tool %q: %v", name, err))
+	}
+
+	outputSchema, err := reflectSchema[O]()
+	if err != nil {
+		panic(fmt.Sprintf("squadron: reflecting output schema for tool %q: %v", name, err))
 	}
 
 	app.tools[name] = &registeredTool{
 		info: &ToolInfo{
-			Name:        name,
-			Description: description,
-			RawSchema:   rawSchema,
+			Name:         name,
+			Description:  description,
+			RawSchema:    rawSchema,
+			OutputSchema: outputSchema,
 		},
 		handler: func(ctx context.Context, payload string) (string, error) {
 			var in I
@@ -37,21 +44,31 @@ func Tool[I, O any](app *App, name, description string, handler Handler[I, O]) {
 			if err != nil {
 				return "", err
 			}
-			b, err := json.Marshal(out)
-			if err != nil {
-				return "", fmt.Errorf("marshal output for %s: %w", name, err)
-			}
-			return string(b), nil
+			return marshalOutput(out)
 		},
 	}
 }
 
-func reflectSchema[I any]() (json.RawMessage, error) {
+func marshalOutput[O any](out O) (string, error) {
+	if s, ok := any(out).(string); ok {
+		return s, nil
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return "", fmt.Errorf("marshal output: %w", err)
+	}
+	return string(b), nil
+}
+
+func reflectSchema[T any]() (json.RawMessage, error) {
+	var zero T
+	if reflect.TypeOf(zero) == nil {
+		return nil, nil
+	}
 	r := &jsonschema.Reflector{
 		Anonymous:      true,
 		ExpandedStruct: true,
 	}
-	var zero I
 	schema := r.Reflect(zero)
 	schema.Version = ""
 	schema.ID = ""

@@ -55,5 +55,6 @@ message ListToolsResponse {
 message ToolInfo {
     string name = 1;
     string description = 2;
-    string schema_json = 3;  // JSON schema for the tool's input parameters
+    string schema_json = 3;
+    string output_schema_json = 4;
 }
