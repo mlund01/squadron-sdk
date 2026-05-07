@@ -8,28 +8,8 @@ import (
 	"github.com/invopop/jsonschema"
 )
 
-// Handler is the signature of a typed tool implementation.
 type Handler[I, O any] func(ctx context.Context, in I) (O, error)
 
-// Tool registers a typed tool on the App. The input schema is reflected from
-// I via github.com/invopop/jsonschema (driven by `json:` and `jsonschema:`
-// struct tags); the host receives the full JSON Schema verbatim, with no
-// lossy projection. Use I = struct{} for tools that take no input.
-//
-// Example:
-//
-//	type EchoInput struct {
-//	    Message string `json:"message" jsonschema:"required,description=Text to echo"`
-//	    AllCaps bool   `json:"all_caps,omitempty"`
-//	}
-//
-//	squadron.Tool(app, "echo", "Echoes back a message",
-//	    func(ctx context.Context, in EchoInput) (string, error) {
-//	        if in.AllCaps {
-//	            return strings.ToUpper(in.Message), nil
-//	        }
-//	        return in.Message, nil
-//	    })
 func Tool[I, O any](app *App, name, description string, handler Handler[I, O]) {
 	if _, exists := app.tools[name]; exists {
 		panic(fmt.Sprintf("squadron: tool %q is already registered", name))
@@ -66,8 +46,6 @@ func Tool[I, O any](app *App, name, description string, handler Handler[I, O]) {
 	}
 }
 
-// reflectSchema produces a JSON Schema (as raw bytes) for the type I. We
-// strip $schema and $id since LLM tool callers don't need them.
 func reflectSchema[I any]() (json.RawMessage, error) {
 	r := &jsonschema.Reflector{
 		Anonymous:      true,
@@ -75,6 +53,7 @@ func reflectSchema[I any]() (json.RawMessage, error) {
 	}
 	var zero I
 	schema := r.Reflect(zero)
+	// Strip $schema and $id; LLM tool callers don't use them and they add noise.
 	schema.Version = ""
 	schema.ID = ""
 	return json.Marshal(schema)
