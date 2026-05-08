@@ -3,6 +3,7 @@ package squadron
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -137,6 +138,63 @@ func TestConfigureHandler(t *testing.T) {
 	}
 	if captured["k"] != "v" {
 		t.Fatalf("expected handler to receive settings, got %v", captured)
+	}
+}
+
+func TestConfigureErrorPropagates(t *testing.T) {
+	app := New()
+	app.Configure(func(settings map[string]string) error {
+		return fmt.Errorf("config rejected: %s", settings["why"])
+	})
+	err := app.AsProvider().Configure(map[string]string{"why": "bad"})
+	if err == nil || !strings.Contains(err.Error(), "config rejected: bad") {
+		t.Fatalf("expected handler error to surface, got %v", err)
+	}
+}
+
+func TestUnknownToolReturnsError(t *testing.T) {
+	app := New()
+	Tool(app, "echo", "", func(ctx context.Context, _ struct{}) (string, error) {
+		return "ok", nil
+	})
+	_, err := app.AsProvider().Call(context.Background(), "missing", "{}")
+	if err == nil || !strings.Contains(err.Error(), "unknown tool") {
+		t.Fatalf("expected unknown-tool error, got %v", err)
+	}
+}
+
+func TestDuplicateToolRegistrationPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic on duplicate Tool registration")
+		}
+	}()
+	app := New()
+	Tool(app, "x", "", func(ctx context.Context, _ struct{}) (string, error) { return "", nil })
+	Tool(app, "x", "", func(ctx context.Context, _ struct{}) (string, error) { return "", nil })
+}
+
+func TestListToolsReturnsAll(t *testing.T) {
+	app := New()
+	Tool(app, "a", "", func(ctx context.Context, _ struct{}) (string, error) { return "", nil })
+	Tool(app, "b", "", func(ctx context.Context, _ struct{}) (string, error) { return "", nil })
+	Tool(app, "c", "", func(ctx context.Context, _ struct{}) (string, error) { return "", nil })
+
+	tools, err := app.AsProvider().ListTools()
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	if len(tools) != 3 {
+		t.Fatalf("got %d tools, want 3: %+v", len(tools), tools)
+	}
+	seen := map[string]bool{}
+	for _, tt := range tools {
+		seen[tt.Name] = true
+	}
+	for _, want := range []string{"a", "b", "c"} {
+		if !seen[want] {
+			t.Errorf("missing tool %q", want)
+		}
 	}
 }
 
