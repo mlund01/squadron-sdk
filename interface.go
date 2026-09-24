@@ -23,6 +23,7 @@ type ToolInfo struct {
 	Schema       Schema
 	RawSchema    json.RawMessage
 	OutputSchema json.RawMessage
+	Idempotent   bool
 }
 
 type ToolProvider interface {
@@ -115,6 +116,7 @@ func protoToToolInfo(t *pb.ToolInfo) (*ToolInfo, error) {
 	if t.OutputSchemaJson != "" {
 		info.OutputSchema = json.RawMessage(t.OutputSchemaJson)
 	}
+	info.Idempotent = t.Idempotent
 	return info, nil
 }
 
@@ -173,6 +175,7 @@ func toolInfoToProto(t *ToolInfo) *pb.ToolInfo {
 		Description:      t.Description,
 		SchemaJson:       string(schemaJSON),
 		OutputSchemaJson: string(t.OutputSchema),
+		Idempotent:       t.Idempotent,
 	}
 }
 

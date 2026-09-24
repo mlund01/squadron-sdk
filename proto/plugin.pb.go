@@ -388,6 +388,7 @@ type ToolInfo struct {
 	Description      string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 	SchemaJson       string                 `protobuf:"bytes,3,opt,name=schema_json,json=schemaJson,proto3" json:"schema_json,omitempty"`
 	OutputSchemaJson string                 `protobuf:"bytes,4,opt,name=output_schema_json,json=outputSchemaJson,proto3" json:"output_schema_json,omitempty"`
+	Idempotent       bool                   `protobuf:"varint,5,opt,name=idempotent,proto3" json:"idempotent,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -450,6 +451,13 @@ func (x *ToolInfo) GetOutputSchemaJson() string {
 	return ""
 }
 
+func (x *ToolInfo) GetIdempotent() bool {
+	if x != nil {
+		return x.Idempotent
+	}
+	return false
+}
+
 var File_proto_plugin_proto protoreflect.FileDescriptor
 
 const file_proto_plugin_proto_rawDesc = "" +
@@ -474,13 +482,16 @@ const file_proto_plugin_proto_rawDesc = "" +
 	"\x04tool\x18\x01 \x01(\v2\x10.plugin.ToolInfoR\x04tool\"\x12\n" +
 	"\x10ListToolsRequest\";\n" +
 	"\x11ListToolsResponse\x12&\n" +
-	"\x05tools\x18\x01 \x03(\v2\x10.plugin.ToolInfoR\x05tools\"\x8f\x01\n" +
+	"\x05tools\x18\x01 \x03(\v2\x10.plugin.ToolInfoR\x05tools\"\xaf\x01\n" +
 	"\bToolInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1f\n" +
 	"\vschema_json\x18\x03 \x01(\tR\n" +
 	"schemaJson\x12,\n" +
-	"\x12output_schema_json\x18\x04 \x01(\tR\x10outputSchemaJson2\x8b\x02\n" +
+	"\x12output_schema_json\x18\x04 \x01(\tR\x10outputSchemaJson\x12\x1e\n" +
+	"\n" +
+	"idempotent\x18\x05 \x01(\bR\n" +
+	"idempotent2\x8b\x02\n" +
 	"\n" +
 	"ToolPlugin\x12@\n" +
 	"\tConfigure\x12\x18.plugin.ConfigureRequest\x1a\x19.plugin.ConfigureResponse\x121\n" +

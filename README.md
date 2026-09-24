@@ -144,6 +144,31 @@ typed `Schema` if both are set — use it to hand-write rich JSON Schema.
 The entry point is `squadron.Serve(provider)` (or `app.Serve()`, which is
 the same thing).
 
+## Durable tool calls
+
+Mission tool calls carry a stable invocation identity outside the JSON payload.
+Plugins that perform side effects should use its idempotency key with the
+downstream system or their own result ledger so replaying the same logical call
+returns the original result:
+
+```go
+squadron.Tool(app, "create_record", "Create a record",
+    func(ctx context.Context, in CreateRecordInput) (Record, error) {
+        invocation, ok := squadron.InvocationMetadataFromContext(ctx)
+        if !ok {
+            return Record{}, errors.New("durable invocation identity is required")
+        }
+        return client.CreateOnce(ctx, invocation.IdempotencyKey, in)
+    }, squadron.Idempotent())
+```
+
+The identity includes the run, task, task attempt, provider tool-use ID, and an
+opaque `IdempotencyKey`. It is runtime metadata, not model-authored input. The
+same logical invocation receives the same key after mission recovery.
+Declaring `squadron.Idempotent()` allows Squadron to replay an interrupted call
+automatically with that same key. Make this declaration only when the tool or
+its downstream system actually enforces the guarantee.
+
 ## Settings
 
 Plugins receive settings from the HCL config via `Configure()`:

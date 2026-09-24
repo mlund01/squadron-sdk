@@ -125,6 +125,18 @@ func TestToolOutputSchemaReflected(t *testing.T) {
 	}
 }
 
+func TestToolCanDeclareIdempotency(t *testing.T) {
+	app := New()
+	Tool(app, "lookup", "Lookup", func(context.Context, struct{}) (string, error) { return "ok", nil }, Idempotent())
+	tools, err := app.AsProvider().ListTools()
+	if err != nil {
+		t.Fatalf("ListTools() error = %v", err)
+	}
+	if len(tools) != 1 || !tools[0].Idempotent {
+		t.Fatalf("tools = %#v, want one idempotent tool", tools)
+	}
+}
+
 func TestConfigureHandler(t *testing.T) {
 	app := New()
 	var captured map[string]string
